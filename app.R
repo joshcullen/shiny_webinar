@@ -7,7 +7,8 @@ library(leaflet)
 library(tidyverse)
 library(lubridate)
 library(sf)
-library(move)
+# remotes::install_github("picardis/nestR")
+library(nestR)
 
 
 
@@ -15,28 +16,24 @@ library(move)
 #### Load data ####
 ###################
 
-data(fishers)  #dataset include within {move} package
+data(gulls)  #dataset include within {nestR} package
 
-# Convert from `Move` object to data frame
-fishers2<- data.frame(fishers) %>%
-  mutate(id = trackId(fishers)) %>%  #add column for animal ID
-  rename(date = study.local.timestamp, x = utm.easting, y = utm.northing) %>%  #rename some cols
-  dplyr::select(id, date, x, y, ground.speed, heading, height.above.ellipsoid)  #subset cols
-
-# Also add Net Squared Displacement
-fishers3<- fishers2 %>% 
+# Add Net Squared Displacement
+gulls2<- gulls %>% 
+  rename(id = burst, x = long, y = lat) %>%  #rename some cols
   split(.$id) %>%  #split by ID into list
   map(., ~{
     # calculate net-squared displacement
-    x0<- .[1,"x"]  #identify starting x-coord
-    y0<- .[1,"y"]  #identify starting y-coord
-    displ<- sqrt((.[,"x"] - x0)^2 + (.[,"y"] - y0)^2)
-    .$NSD<- displ^2
-    .[,]
+    x0<- as.numeric(.[1,"x"])  #identify starting x-coord
+    y0<- as.numeric(.[1,"y"])  #identify starting y-coord
+    displ<- sqrt((.[,"x"] - x0)^2 + (.[,"y"] - y0)^2)  #calc net displacement
+    .$NSD<- displ^2  #net squared displacement
+    
+    return(.[,])
   }) %>% 
   bind_rows()  #change back to data frame
 
-data<- fishers3  #rename as 'data' so more general for code
+data<- gulls2  #rename as 'data' so more general for code
 
 
 
@@ -133,8 +130,7 @@ server <- function(input, output, session) {
     output$map <- renderLeaflet({
       
       # convert dat.filt() to sf object
-      dat.filt.sf<- sf::st_as_sf(dat.filt(), coords = c("x","y"), crs = 32618) %>%
-        sf::st_transform(4326) %>%
+      dat.filt.sf<- sf::st_as_sf(dat.filt(), coords = c("x","y"), crs = 4326) %>%
         sf::st_cast("LINESTRING")
       
       # create base leaflet map
@@ -156,23 +152,19 @@ server <- function(input, output, session) {
       req(dat.filt.time())  #Do this if dat.filt.time() is not null
       
       # convert dat.filt() to sf object; to replace when using clearShapes()
-      dat.filt.sf<- sf::st_as_sf(dat.filt(), coords = c("x","y"), crs = 32618) %>%
-        sf::st_transform(4326) %>%
+      dat.filt.sf<- sf::st_as_sf(dat.filt(), coords = c("x","y"), crs = 4326) %>%
         sf::st_cast("LINESTRING")
       
       # Track w/in dygraph time window
-      df.sf<- sf::st_as_sf(dat.filt.time(), coords = c("x","y"), crs = 32618) %>%
-        sf::st_transform(4326) %>%
+      df.sf<- sf::st_as_sf(dat.filt.time(), coords = c("x","y"), crs = 4326) %>%
         sf::st_cast("LINESTRING")
       
       # First point of filtered track
-      df.start.pt<- sf::st_as_sf(dat.filt.time(), coords = c("x","y"), crs = 32618) %>%
-        sf::st_transform(4326) %>%
+      df.start.pt<- sf::st_as_sf(dat.filt.time(), coords = c("x","y"), crs = 4326) %>%
         dplyr::slice(1)
       
       # Last point of filtered track
-      df.end.pt<- sf::st_as_sf(dat.filt.time(), coords = c("x","y"), crs = 32618) %>%
-        sf::st_transform(4326) %>%
+      df.end.pt<- sf::st_as_sf(dat.filt.time(), coords = c("x","y"), crs = 4326) %>%
         dplyr::slice(n())
        
       
