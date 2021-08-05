@@ -10,6 +10,7 @@ library(sf)
 library(move)
 
 
+
 ###################
 #### Load data ####
 ###################
@@ -56,8 +57,7 @@ ui <- fluidPage(
                                                  selected = names(data)[names(data) != "id"][1])
                                      ),  #close sidebarPanel
                         mainPanel(dygraphOutput("lineplot"),
-                                  leafletOutput('map')#,
-                                  # dataTableOutput("tab")
+                                  leafletOutput('map')
                                   )  #close mainPanel
                       )  #close sidebarLayout
              
@@ -101,6 +101,8 @@ server <- function(input, output, session) {
       
     })
     
+    
+    
     #######################################################
     ### Filter dat.filt() based on selected time window ###
     #######################################################
@@ -123,7 +125,8 @@ server <- function(input, output, session) {
         return(subset)
       }
     }) %>% 
-      debounce(500)  #add delay so map doesn't hang up
+      debounce(millis = 500)  #add delay so map doesn't hang up
+    
     
     
     ### Add basemap and greyed-out full track
@@ -201,11 +204,6 @@ server <- function(input, output, session) {
                          fillOpacity = 0.8)
       
     })
-    
-    
-    # output$tab <- renderDataTable({
-    #   dat.filt.time()
-    # })
     
   }
 
