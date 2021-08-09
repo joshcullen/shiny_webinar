@@ -1,3 +1,8 @@
+### Bare-bones app for "Visualization of Data in Space and Time"
+### Shiny Webinar Series
+###
+### Josh Cullen
+### August 10, 2021
 
 
 library(shiny)
@@ -16,10 +21,10 @@ library(nestR)
 #### Load data ####
 ###################
 
-data(gulls)  #dataset include within {nestR} package
+data(woodstorks)  #dataset include within {nestR} package
 
 # Add Net Squared Displacement
-gulls2<- gulls %>% 
+woodstorks2<- woodstorks %>% 
   rename(id = burst, x = long, y = lat) %>%  #rename some cols
   split(.$id) %>%  #split by ID into list
   map(., ~{
@@ -33,7 +38,7 @@ gulls2<- gulls %>%
   }) %>% 
   bind_rows()  #change back to data frame
 
-data<- gulls2  #rename as 'data' so more general for code
+data<- woodstorks2  #rename as 'data' so more general for code
 
 
 
@@ -72,7 +77,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
     
     ### Modify data
-    data$id<- as.character(data$id)  #convert from factor
+    data$id<- as.character(data$id)  #convert from factor or numeric if needed
     data$date<- lubridate::as_datetime(data$date)  #ensure that in datetime format
     
     
@@ -169,28 +174,28 @@ server <- function(input, output, session) {
        
       
       # Clear old selection on map and add new selection
-      leafletProxy('map') %>%
-        clearShapes() %>%
-        clearMarkers() %>%
+      leafletProxy('map') %>%  #makes updates to basemap
+        clearShapes() %>%  #clear the previously highlighted track segment
+        clearMarkers() %>%  #clear the start and end points
         fitBounds(as.numeric(sf::st_bbox(df.sf)[1]),
-                  as.numeric(sf::st_bbox(df.sf)[2]),
+                  as.numeric(sf::st_bbox(df.sf)[2]),  #define new extent of map
                   as.numeric(sf::st_bbox(df.sf)[3]),
                   as.numeric(sf::st_bbox(df.sf)[4])) %>%
-        addPolylines(lng = as.numeric(sf::st_coordinates(dat.filt.sf)[,1]),
+        addPolylines(lng = as.numeric(sf::st_coordinates(dat.filt.sf)[,1]),  #add full track
                      lat = as.numeric(sf::st_coordinates(dat.filt.sf)[,2]),
                      weight = 2,
                      color = "lightgrey",
                      opacity = 0.4) %>%
-        addPolylines(lng = as.numeric(sf::st_coordinates(df.sf)[,1]),
+        addPolylines(lng = as.numeric(sf::st_coordinates(df.sf)[,1]),  #add highlighted track segment of interest
                      lat = as.numeric(sf::st_coordinates(df.sf)[,2]),
                      weight = 2,
                      color = "darkturquoise",
                      opacity = 0.8) %>%
-        addCircleMarkers(data = df.start.pt,
+        addCircleMarkers(data = df.start.pt,  #add starting location as point
                          fillColor = "#5EF230",
                          stroke = FALSE,
                          fillOpacity = 0.8) %>%
-        addCircleMarkers(data = df.end.pt,
+        addCircleMarkers(data = df.end.pt,  #add ending location as point
                          fillColor = "red",
                          stroke = FALSE,
                          fillOpacity = 0.8)
